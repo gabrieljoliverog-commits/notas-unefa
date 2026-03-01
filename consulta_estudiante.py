@@ -1,5 +1,14 @@
 import streamlit as st
 from supabase import create_client, Client
+import unicodedata
+
+# --- EL ESCUDO DE LIMPIEZA (Para que la web ignore espacios y acentos) ---
+def limpiar(t):
+    if not t: return ""
+    # Borra espacios dobles y finales, y pone todo en MAYÚSCULAS
+    t = " ".join(t.split()).upper()
+    # Elimina tildes y acentos
+    return ''.join(c for c in unicodedata.normalize('NFD', t) if unicodedata.category(c) != 'Mn')
 
 # --- CONFIGURACIÓN (Tus llaves de Supabase) ---
 URL_NUBE = "https://ecqjfkbo fhkjpbfnvecd.supabase.co".replace(" ", "")
@@ -11,12 +20,13 @@ st.set_page_config(page_title="Consulta UNEFA", page_icon="🎓")
 st.title("🎓 Sistema de Consulta de Notas")
 st.write("Escribe tu nombre completo para ver tus resultados actuales.")
 
-# Buscador
-nombre_buscado = st.text_input("Nombre del Estudiante:").upper()
+# Buscador con LIMPIEZA AUTOMÁTICA
+nombre_sucio = st.text_input("Nombre del Estudiante:")
+nombre_buscado = limpiar(nombre_sucio)
 
 if st.button("Buscar Notas"):
     if nombre_buscado:
-        # Consultamos a la nube
+        # Consultamos a la nube usando el nombre ya limpio
         try:
             res = supabase.table("unefa_nube").select("*").eq("nombre", nombre_buscado).execute()
             
@@ -40,7 +50,7 @@ if st.button("Buscar Notas"):
                 }
                 st.table(detalles)
             else:
-                st.error("No se encontró ningún registro con ese nombre. Revisa si hay errores al escribir.")
+                st.error("No se encontró ningún registro. Intenta sin acentos o revisa los espacios.")
         except Exception as e:
             st.error(f"Error de conexión: {e}")
     else:
